@@ -15,9 +15,17 @@ import pdfplumber
 import google.generativeai as genai
 from dotenv import load_dotenv
 
+# delete it after
+# -------------------------------------------------------------------------------------
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+import pkg_resources
 
+print("SDK:", pkg_resources.get_distribution("google-generativeai").version)
+
+for m in genai.list_models():
+    print(m.name)
+# -----------------------------------------------------------------------------------------
 EXTRACTION_PROMPT = """You are analyzing an Indian court judgment. Read the text below and extract:
 
 1. Case metadata: case_number, court_name, order_date (YYYY-MM-DD if determinable), petitioner, respondent.
