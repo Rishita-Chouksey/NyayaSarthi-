@@ -12,7 +12,8 @@ import json
 import re
 from datetime import date, timedelta
 import pdfplumber
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 
@@ -54,13 +55,13 @@ JUDGMENT TEXT:
 {text}
 ---
 """
-# delet ----------------------
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+load_dotenv()
 
-for m in genai.list_models():
-    if "generateContent" in m.supported_generation_methods:
-        print(m.name, m.supported_generation_methods)
-# -----------------------
+print("API KEY FOUND:", bool(os.getenv("GEMINI_API_KEY")))  # ----------------DELETE _________________PLEASE DELETE AFTER
+
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY")
+)
 
 def extract_text_from_pdf(file_path: str) -> tuple[str, str]:
     """Returns (full_text, document_type). document_type is 'digital' if pdfplumber
@@ -93,29 +94,35 @@ def _ocr_pdf(file_path: str) -> str:
 
 
 def run_ai_extraction(judgment_text: str) -> dict:
-    """Sends the judgment text to Gemini and returns the parsed, structured draft.
-    Raises ValueError if Gemini doesn't return valid JSON — the caller should catch
-    this and mark the case as extraction_failed rather than guessing."""
-    
-    print("Creating Gemini model...") # --- delete
-    model = genai.GenerativeModel("gemini-2.5-flash")
-    print("Model created:", model.model_name) # --- delete
-    
-    prompt = EXTRACTION_PROMPT.replace("{text}", judgment_text[:30000])  # keep prompt within context limits
+    """
+    Sends the judgment text to Gemini and returns structured JSON.
+    """
 
-    print("Sending request to Gemini...") # --- delete
-    response = model.generate_content(
-        prompt,
-        generation_config={"response_mime_type": "application/json"},
+    prompt = EXTRACTION_PROMPT.replace("{text}", judgment_text[:30000])
+
+    print("Sending request to Gemini...")
+
+    response = client.models.generate_content(
+        model="gemini-3.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            temperature=0.2,
+        ),
     )
-    print("Received response") # --- delete
+
+    print("Received response")
+
     raw = response.text.strip()
-    raw = re.sub(r"^```json|```$", "", raw).strip()  # safety net if the model adds fences anyway
+
+    raw = re.sub(r"^```json|```$", "", raw).strip()
 
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Gemini did not return valid JSON: {e}\nRaw response: {raw[:500]}")
+        raise ValueError(
+            f"Gemini did not return valid JSON: {e}\nRaw response:\n{raw[:500]}"
+        )
 
     if "directives" not in data or not isinstance(data["directives"], list):
         raise ValueError("Gemini response is missing a valid 'directives' list")
