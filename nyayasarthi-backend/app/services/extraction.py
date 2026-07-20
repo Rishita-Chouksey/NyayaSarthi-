@@ -103,7 +103,7 @@ def run_ai_extraction(judgment_text: str) -> dict:
     print("Sending request to Gemini...")
 
     response = client.models.generate_content(
-        model="Gemini 3.1 Flash Lite",
+        model="gemini-3.1-flash-lite",
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
