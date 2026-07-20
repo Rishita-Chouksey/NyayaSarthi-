@@ -54,7 +54,13 @@ JUDGMENT TEXT:
 {text}
 ---
 """
+# delet ----------------------
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
+for m in genai.list_models():
+    if "generateContent" in m.supported_generation_methods:
+        print(m.name, m.supported_generation_methods)
+# -----------------------
 
 def extract_text_from_pdf(file_path: str) -> tuple[str, str]:
     """Returns (full_text, document_type). document_type is 'digital' if pdfplumber
