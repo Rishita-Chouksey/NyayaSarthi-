@@ -92,7 +92,7 @@ def run_ai_extraction(judgment_text: str) -> dict:
     """Sends the judgment text to Gemini and returns the parsed, structured draft.
     Raises ValueError if Gemini doesn't return valid JSON — the caller should catch
     this and mark the case as extraction_failed rather than guessing."""
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash")
     prompt = EXTRACTION_PROMPT.replace("{text}", judgment_text[:30000])  # keep prompt within context limits
 
     response = model.generate_content(
