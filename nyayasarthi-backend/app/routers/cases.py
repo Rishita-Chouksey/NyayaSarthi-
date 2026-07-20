@@ -25,19 +25,19 @@ def upload_judgment(file: UploadFile = File(...), db: Session = Depends(get_db))
     file_bytes = file.file.read()
     file_hash = hashlib.sha256(file_bytes).hexdigest()
 
-    existing = db.query(models.Case).filter(models.Case.source_pdf_hash == file_hash).first()
-    if existing:
-        if existing.status == "extraction_failed" or existing.case_number == "Pending extraction…":
-            # A previous attempt on this exact file never completed — clean it up
-            # and let this upload retry from scratch, instead of blocking it forever.
-            db.query(models.Directive).filter(models.Directive.case_id == existing.id).delete()
-            db.delete(existing)
-            db.commit()
-        else:
-            raise HTTPException(
-                status_code=409,
-                detail=f"This judgment appears to already be in the system as case {existing.case_number}."
-            )
+    # existing = db.query(models.Case).filter(models.Case.source_pdf_hash == file_hash).first()
+    # if existing:
+    #     if existing.status == "extraction_failed" or existing.case_number == "Pending extraction…":
+    #         # A previous attempt on this exact file never completed — clean it up
+    #         # and let this upload retry from scratch, instead of blocking it forever.
+    #         db.query(models.Directive).filter(models.Directive.case_id == existing.id).delete()
+    #         db.delete(existing)
+    #         db.commit()
+    #     else:
+    #         raise HTTPException(
+    #             status_code=409,
+    #             detail=f"This judgment appears to already be in the system as case {existing.case_number}."
+    #         )
 
     file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.filename}")
     with open(file_path, "wb") as f:
