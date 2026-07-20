@@ -171,7 +171,7 @@ function Sidebar({ view, setView, pendingCount, onUploadClick }) {
           </button>
         );
       })}
-      <div className="mt-auto text-[11px] opacity-40 px-2 pt-4">Connected to localhost:8000</div>
+      <div className="mt-auto text-[11px] opacity-40 px-2 pt-4">{import.meta.env.VITE_API_URL}</div>
     </div>
   );
 }
