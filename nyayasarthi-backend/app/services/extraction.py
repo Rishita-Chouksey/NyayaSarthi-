@@ -15,17 +15,7 @@ import pdfplumber
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-# delete it after
-# -------------------------------------------------------------------------------------
-load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-import pkg_resources
 
-print("SDK:", pkg_resources.get_distribution("google-generativeai").version)
-
-for m in genai.list_models():
-    print(m.name)
-# -----------------------------------------------------------------------------------------
 EXTRACTION_PROMPT = """You are analyzing an Indian court judgment. Read the text below and extract:
 
 1. Case metadata: case_number, court_name, order_date (YYYY-MM-DD if determinable), petitioner, respondent.
@@ -100,14 +90,19 @@ def run_ai_extraction(judgment_text: str) -> dict:
     """Sends the judgment text to Gemini and returns the parsed, structured draft.
     Raises ValueError if Gemini doesn't return valid JSON — the caller should catch
     this and mark the case as extraction_failed rather than guessing."""
-    model = genai.GenerativeModel("gemini-2.5-flash-lite")
+    
+    print("Creating Gemini model...") # --- delete
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    print("Model created:", model.model_name) # --- delete
+    
     prompt = EXTRACTION_PROMPT.replace("{text}", judgment_text[:30000])  # keep prompt within context limits
 
+    print("Sending request to Gemini...") # --- delete
     response = model.generate_content(
         prompt,
         generation_config={"response_mime_type": "application/json"},
     )
-
+    print("Received response") # --- delete
     raw = response.text.strip()
     raw = re.sub(r"^```json|```$", "", raw).strip()  # safety net if the model adds fences anyway
 
