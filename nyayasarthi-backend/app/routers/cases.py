@@ -10,6 +10,7 @@ from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
+from app.auth import get_current_user, require_role
 from app.services.extraction import extract_text_from_pdf, run_ai_extraction, compute_deadline
 from app.services.audit import write_audit
 
@@ -20,7 +21,11 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 @router.post("/upload", response_model=schemas.CaseOut)
-def upload_judgment(file: UploadFile = File(...), db: Session = Depends(get_db)):
+def upload_judgment(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_role(["legal_officer", "admin_authority"])),
+):
     # 1. Save the file and hash it, so we can detect duplicate uploads
     file_bytes = file.file.read()
     file_hash = hashlib.sha256(file_bytes).hexdigest()
@@ -49,11 +54,12 @@ def upload_judgment(file: UploadFile = File(...), db: Session = Depends(get_db))
         source_pdf_url=file_path,
         source_pdf_hash=file_hash,
         status="extracting",
+        uploaded_by=current_user.id,
     )
     db.add(case)
     db.commit()
     db.refresh(case)
-    write_audit(db, "case", case.id, "Judgment PDF uploaded", actor_type="human")
+    write_audit(db, "case", case.id, "Judgment PDF uploaded", actor_id=current_user.id, actor_type="human")
     db.commit()
 
     # 3. Extract text (OCR if needed)
@@ -115,7 +121,7 @@ def upload_judgment(file: UploadFile = File(...), db: Session = Depends(get_db))
 
 
 @router.get("/{case_id}", response_model=schemas.CaseOut)
-def get_case(case_id: str, db: Session = Depends(get_db)):
+def get_case(case_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     case = db.query(models.Case).filter(models.Case.id == case_id).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
@@ -123,7 +129,7 @@ def get_case(case_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("", response_model=list[schemas.CaseOut])
-def list_cases(status: str | None = None, db: Session = Depends(get_db)):
+def list_cases(status: str | None = None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     q = db.query(models.Case)
     if status:
         q = q.filter(models.Case.status == status)

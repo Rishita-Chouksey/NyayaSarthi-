@@ -6,7 +6,7 @@ Then open http://localhost:8000/docs to see and try every API endpoint live.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
-from app.routers import cases, verification, actions, audit, departments
+from app.routers import auth, cases, verification, actions, audit, departments
 
 # Creates all tables in Postgres if they don't already exist.
 # For real production use, switch to Alembic migrations (see alembic/ folder).
@@ -36,6 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(cases.router)
 app.include_router(verification.router)
 app.include_router(actions.router)

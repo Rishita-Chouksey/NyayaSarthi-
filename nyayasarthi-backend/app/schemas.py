@@ -77,3 +77,30 @@ class LoginOut(BaseModel):
     token_type: str = "bearer"
     role: str
     full_name: str
+
+
+class SignupIn(BaseModel):
+    full_name: str
+    email: str
+    password: str
+    role: str
+    department_id: Optional[str] = None
+    # Required for any role other than department_officer — see auth.py.
+    invite_code: Optional[str] = None
+
+
+class GoogleAuthIn(BaseModel):
+    # The ID token (JWT) returned by Google Identity Services on the frontend.
+    credential: str
+
+
+class UserOut(BaseModel):
+    id: str
+    full_name: str
+    email: str
+    role: str
+    department_id: Optional[str] = None
+    auth_provider: str
+
+    class Config:
+        from_attributes = True

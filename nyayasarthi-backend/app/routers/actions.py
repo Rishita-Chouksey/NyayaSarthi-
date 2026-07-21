@@ -8,13 +8,23 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
+from app.auth import get_current_user, require_role
 from app.services.audit import write_audit
 
 router = APIRouter(prefix="/api/v1/actions", tags=["actions"])
 
+# Auditors are read-only by definition (PRD persona 4) — everyone else who
+# can see an action is allowed to move it through its lifecycle.
+STATUS_UPDATE_ROLES = ["legal_officer", "admin_authority", "department_officer"]
+
 
 @router.get("", response_model=list[schemas.ActionOut])
-def list_actions(status: str | None = None, department_id: str | None = None, db: Session = Depends(get_db)):
+def list_actions(
+    status: str | None = None,
+    department_id: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     q = db.query(models.Action)
     if status:
         q = q.filter(models.Action.status == status)
@@ -24,7 +34,12 @@ def list_actions(status: str | None = None, department_id: str | None = None, db
 
 
 @router.patch("/{action_id}/status", response_model=schemas.ActionOut)
-def update_action_status(action_id: str, body: schemas.ActionStatusUpdateIn, db: Session = Depends(get_db)):
+def update_action_status(
+    action_id: str,
+    body: schemas.ActionStatusUpdateIn,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_role(STATUS_UPDATE_ROLES)),
+):
     action = db.query(models.Action).filter(models.Action.id == action_id).first()
     if not action:
         raise HTTPException(status_code=404, detail="Action not found")
@@ -39,14 +54,14 @@ def update_action_status(action_id: str, body: schemas.ActionStatusUpdateIn, db:
         from datetime import datetime
         action.completed_at = datetime.utcnow()
 
-    write_audit(db, "action", action.id, f"Status changed to {body.status}")
+    write_audit(db, "action", action.id, f"Status changed to {body.status}", actor_id=current_user.id)
     db.commit()
     db.refresh(action)
     return action
 
 
 @router.get("/dashboard/stats")
-def dashboard_stats(db: Session = Depends(get_db)):
+def dashboard_stats(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """Powers the four summary cards on the Actioned Dashboard."""
     total_cases = db.query(models.Case).count()
     all_actions = db.query(models.Action).all()

@@ -22,9 +22,15 @@ class User(Base):
     id = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
     full_name = Column(String(150), nullable=False)
     email = Column(String(150), unique=True, nullable=False, index=True)
-    password_hash = Column(String(255), nullable=False)
+    # Nullable because Google-only accounts never set a local password.
+    password_hash = Column(String(255), nullable=True)
     role = Column(Enum("legal_officer", "admin_authority", "department_officer", "auditor", name="user_role"), nullable=False)
     department_id = Column(UUID(as_uuid=False), ForeignKey("departments.id"), nullable=True)
+    # How this account authenticates. "google" accounts sign in exclusively via
+    # Google OAuth; "local" accounts use email + password. An account can gain
+    # a google_sub later (linked) without changing its original auth_provider.
+    auth_provider = Column(Enum("local", "google", name="auth_provider"), default="local", nullable=False)
+    google_sub = Column(String(255), unique=True, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

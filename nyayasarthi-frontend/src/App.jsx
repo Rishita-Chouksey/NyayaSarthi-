@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   Scale, Upload, FileText, CheckCircle2, XCircle, Pencil, Clock,
   AlertTriangle, ShieldCheck, LayoutDashboard, Inbox, Search,
-  ChevronRight, CalendarDays, Building2, ArrowLeft, Sparkles, Loader2,
+  ChevronRight, CalendarDays, Building2, ArrowLeft, Sparkles, Loader2, LogOut,
 } from "lucide-react";
 import * as api from "./api";
+import { useAuth } from "./auth/AuthContext";
+import AuthPage from "./pages/AuthPage";
 
 function fmtDate(d) {
   if (!d) return "—";
@@ -18,6 +20,7 @@ function daysUntil(dateStr) {
 }
 
 export default function App() {
+  const { token, user, logout } = useAuth();
   const [view, setView] = useState("home");
   const [cases, setCases] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -49,11 +52,14 @@ export default function App() {
     setActiveCase(res.data);
   }
 
+  // Only pull case/department/action data once someone is actually logged
+  // in — otherwise these calls would just bounce off the backend as 401s.
   useEffect(() => {
+    if (!token) return;
     refreshDepartments().catch(() => {});
     refreshCases().catch(() => {});
     refreshActions().catch(() => {});
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (activeCaseId) refreshActiveCase(activeCaseId).catch(() => {});
@@ -101,9 +107,13 @@ export default function App() {
 
   const pendingQueueCount = cases.filter((c) => c.status === "pending_verification" || c.status === "verification_in_progress").length;
 
+  if (!token || !user) {
+    return <AuthPage />;
+  }
+
   return (
     <div className="min-h-screen flex">
-      <Sidebar view={view} setView={setView} pendingCount={pendingQueueCount} onUploadClick={() => fileInputRef.current?.click()} />
+      <Sidebar view={view} setView={setView} pendingCount={pendingQueueCount} onUploadClick={() => fileInputRef.current?.click()} user={user} onLogout={logout} />
       <input
         ref={fileInputRef}
         type="file"
@@ -113,7 +123,7 @@ export default function App() {
       />
 
       <div className="flex-1 px-9 py-7 overflow-y-auto">
-        {view === "home" && <Home cases={cases} onUploadClick={() => fileInputRef.current?.click()} />}
+        {view === "home" && <Home cases={cases} onUploadClick={() => fileInputRef.current?.click()} canUpload={UPLOAD_ROLES.includes(user?.role)} />}
         {view === "intake" && <IntakeProgress state={uploadState} error={uploadError} caseObj={activeCase} onRetry={() => fileInputRef.current?.click()} />}
         {view === "queue" && (
           <VerificationQueue
@@ -135,10 +145,19 @@ export default function App() {
   );
 }
 
-function Sidebar({ view, setView, pendingCount, onUploadClick }) {
+const UPLOAD_ROLES = ["legal_officer", "admin_authority"];
+const ROLE_LABELS = {
+  legal_officer: "Legal Officer",
+  admin_authority: "Administrative Authority",
+  department_officer: "Department Officer",
+  auditor: "Auditor",
+};
+
+function Sidebar({ view, setView, pendingCount, onUploadClick, user, onLogout }) {
+  const canUpload = UPLOAD_ROLES.includes(user?.role);
   const items = [
     { key: "home", label: "Case Processor", icon: Scale, action: () => setView("home") },
-    { key: "intake", label: "Case Intake", icon: Inbox, action: onUploadClick },
+    { key: "intake", label: "Case Intake", icon: Inbox, action: onUploadClick, disabled: !canUpload },
     { key: "queue", label: "Verification Queue", icon: ShieldCheck, action: () => setView("queue"), badge: pendingCount },
     { key: "actions", label: "Approved Actions", icon: CheckCircle2, action: () => setView("actions") },
     { key: "dashboard", label: "Actioned Dashboard", icon: LayoutDashboard, action: () => setView("dashboard") },
@@ -160,9 +179,15 @@ function Sidebar({ view, setView, pendingCount, onUploadClick }) {
         return (
           <button
             key={it.key}
-            onClick={it.action}
+            onClick={it.disabled ? undefined : it.action}
+            disabled={it.disabled}
+            title={it.disabled ? "Your role doesn't have permission to intake new judgments" : undefined}
             className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-left ${
-              active ? "bg-gold/20 border border-gold/40 text-[#EFD9A5]" : "border border-transparent text-[#DCE3EA] hover:bg-white/5"
+              it.disabled
+                ? "text-[#DCE3EA]/30 cursor-not-allowed"
+                : active
+                ? "bg-gold/20 border border-gold/40 text-[#EFD9A5]"
+                : "border border-transparent text-[#DCE3EA] hover:bg-white/5"
             }`}
           >
             <Icon size={16} />
@@ -171,12 +196,26 @@ function Sidebar({ view, setView, pendingCount, onUploadClick }) {
           </button>
         );
       })}
-      <div className="mt-auto text-[11px] opacity-40 px-2 pt-4">{import.meta.env.VITE_API_URL}</div>
+
+      <div className="mt-auto border-t border-white/10 pt-3.5">
+        <div className="px-2 mb-2.5">
+          <div className="text-sm font-semibold text-[#EFD9A5] truncate">{user?.full_name}</div>
+          <div className="text-[10.5px] opacity-60">{ROLE_LABELS[user?.role] || user?.role}</div>
+        </div>
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-[#DCE3EA] hover:bg-white/5"
+        >
+          <LogOut size={15} />
+          <span>Log out</span>
+        </button>
+        <div className="text-[11px] opacity-40 px-2 pt-3">{import.meta.env.VITE_API_URL}</div>
+      </div>
     </div>
   );
 }
 
-function Home({ cases, onUploadClick }) {
+function Home({ cases, onUploadClick, canUpload }) {
   return (
     <div className="max-w-3xl">
       <div className="bg-gradient-to-br from-navy to-[#16304D] rounded-2xl p-10 text-paper relative overflow-hidden mb-7">
@@ -186,9 +225,15 @@ function Home({ cases, onUploadClick }) {
         <p className="text-sm opacity-85 mt-3.5 max-w-lg leading-relaxed">
           Bridge the critical gap between judicial orders and executive action. Every AI-extracted directive is reviewed by a human before it becomes official.
         </p>
-        <button onClick={onUploadClick} className="mt-6 bg-gold text-navy font-bold text-sm px-5 py-2.5 rounded-lg flex items-center gap-2">
-          <Upload size={15} /> Process New Judgment (upload a real PDF)
-        </button>
+        {canUpload ? (
+          <button onClick={onUploadClick} className="mt-6 bg-gold text-navy font-bold text-sm px-5 py-2.5 rounded-lg flex items-center gap-2">
+            <Upload size={15} /> Process New Judgment (upload a real PDF)
+          </button>
+        ) : (
+          <div className="mt-6 text-xs opacity-70 flex items-center gap-2">
+            <ShieldCheck size={14} /> Judgment intake is limited to Legal Officers and Administrative Authorities.
+          </div>
+        )}
       </div>
 
       <div className="font-serif text-base font-bold mb-3">Recent Cases</div>

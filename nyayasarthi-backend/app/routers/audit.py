@@ -2,12 +2,18 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/audit", tags=["audit"])
 
 
 @router.get("/{entity_type}/{entity_id}")
-def get_audit_history(entity_type: str, entity_id: str, db: Session = Depends(get_db)):
+def get_audit_history(
+    entity_type: str,
+    entity_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     """Full chronological history for any case, directive, or action — read-only,
     nothing in the system ever deletes or edits these rows."""
     entries = (
