@@ -1,6 +1,12 @@
-# NyayaSarthi
+# ⚖️NyayaSarthi
 
 **Court Order Execution System — turning judicial directives into tracked, accountable administrative action.**
+
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688)
+![React](https://img.shields.io/badge/React-Frontend-61DAFB)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791)
+![Docker](https://img.shields.io/badge/Docker-Container-2496ED)
 
 ---
 
