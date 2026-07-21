@@ -17,6 +17,7 @@ Design choices worth knowing:
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+import os
 
 from app.database import get_db
 from app import models, schemas
@@ -28,6 +29,16 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 ALLOWED_SIGNUP_ROLES = ["legal_officer", "admin_authority", "department_officer", "auditor"]
 
+# Any role other than department_officer requires the matching secret invite
+# code (set in .env, shared only with officials who should hold that role).
+# department_officer has no entry here on purpose — it's the public,
+# no-code-required signup role, matching the default Google sign-in grants.
+INVITE_CODE_ENV_VARS = {
+    "legal_officer": "LEGAL_OFFICER_INVITE_CODE",
+    "admin_authority": "ADMIN_AUTHORITY_INVITE_CODE",
+    "auditor": "AUDITOR_INVITE_CODE",
+}
+
 
 @router.post("/signup", response_model=schemas.LoginOut)
 def signup(body: schemas.SignupIn, db: Session = Depends(get_db)):
@@ -37,6 +48,20 @@ def signup(body: schemas.SignupIn, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=f"role must be one of {ALLOWED_SIGNUP_ROLES}")
     if len(body.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
+    invite_env_var = INVITE_CODE_ENV_VARS.get(body.role)
+    if invite_env_var:
+        expected_code = os.getenv(invite_env_var, "")
+        if not expected_code:
+            raise HTTPException(
+                status_code=403,
+                detail="Self-signup for this role is currently disabled. Contact your admin authority.",
+            )
+        if not body.invite_code or body.invite_code != expected_code:
+            raise HTTPException(
+                status_code=403,
+                detail="That invite code is missing or incorrect for the selected role.",
+            )
 
     existing = db.query(models.User).filter(models.User.email == email).first()
     if existing:

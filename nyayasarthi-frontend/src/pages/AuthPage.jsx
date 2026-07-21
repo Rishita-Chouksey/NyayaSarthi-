@@ -5,13 +5,13 @@ import GoogleButton from "../components/GoogleButton";
 import * as api from "../api";
 
 const ROLES = [
-  { value: "legal_officer", label: "Legal Officer" },
-  { value: "admin_authority", label: "Administrative Authority" },
   { value: "department_officer", label: "Department Officer" },
-  { value: "auditor", label: "Auditor (read-only)" },
+  { value: "legal_officer", label: "Legal Officer", needsInvite: true },
+  { value: "admin_authority", label: "Administrative Authority", needsInvite: true },
+  { value: "auditor", label: "Auditor (read-only)", needsInvite: true },
 ];
 
-const emptyForm = { full_name: "", email: "", password: "", role: "legal_officer", department_id: "" };
+const emptyForm = { full_name: "", email: "", password: "", role: "department_officer", department_id: "", invite_code: "" };
 
 export default function AuthPage() {
   const { login, signup, loginWithGoogle } = useAuth();
@@ -171,6 +171,17 @@ export default function AuthPage() {
                     ))}
                   </select>
                 </Field>
+                {ROLES.find((r) => r.value === form.role)?.needsInvite && (
+                  <Field label="Invite code">
+                    <input
+                      required
+                      value={form.invite_code}
+                      onChange={(e) => setForm({ ...form, invite_code: e.target.value })}
+                      className="border border-[#DCD5C0] rounded-md px-3 py-2 text-sm w-full"
+                      placeholder="Provided by your admin authority"
+                    />
+                  </Field>
+                )}
               </>
             )}
 

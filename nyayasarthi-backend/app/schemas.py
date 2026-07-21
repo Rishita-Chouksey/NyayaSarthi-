@@ -85,6 +85,8 @@ class SignupIn(BaseModel):
     password: str
     role: str
     department_id: Optional[str] = None
+    # Required for any role other than department_officer — see auth.py.
+    invite_code: Optional[str] = None
 
 
 class GoogleAuthIn(BaseModel):
