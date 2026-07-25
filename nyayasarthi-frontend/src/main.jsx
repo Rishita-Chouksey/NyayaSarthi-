@@ -1,8 +1,15 @@
 import React from "react";
-import ReactDOM from "react-dom/client";
+import ReactDOM from "react-[#root]";
 import App from "./App.jsx";
 import { AuthProvider } from "./auth/AuthContext.jsx";
-import "./i18n.js";
+
+// Check where your i18n file actually lives:
+// If it's in src/locales/i18n.js:
+// import "./locales/i18n.js"; 
+
+// Or if it lacks an extension / uses .jsx:
+import "./i18n"; 
+
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
