@@ -16,11 +16,23 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
-
 EXTRACTION_PROMPT = """You are analyzing an Indian court judgment. Read the text below and extract:
 
 1. Case metadata: case_number, court_name, order_date (YYYY-MM-DD if determinable), petitioner, respondent.
-2. Every distinct actionable directive the court has ordered some government body to carry out.
+2. Every distinct actionable directive in the order. A directive is any instruction,
+   consequence, or outcome the court has ordered that requires some government
+   official, department, or authority to take action or ensure compliance. This
+   includes, but is not limited to:
+   - Administrative or compliance instructions to a department or officer
+   - Sentences or punishments imposed on named individuals, since these require
+     the custodial/enforcement authority to act on them
+   - Fines, compensation, or monetary amounts to be paid, collected, or deposited
+   - Custody, transfer, release, or lodging instructions concerning any person or property
+   - Deadlines, reporting, or filing requirements imposed on any authority
+   Extract EVERY such instance separately, even if several appear in a single
+   paragraph or numbered clause, and even if the language describes an outcome
+   (e.g. a sentence or fine) rather than an explicit administrative command —
+   if it requires some authority to act or comply, it is a directive.
    For each directive, extract:
    - raw_description: a plain-language, one-sentence rewrite of what must be done
    - source_page: the page number where this appears (best guess if unclear, use 1)
