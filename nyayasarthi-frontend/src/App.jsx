@@ -168,14 +168,17 @@ function Sidebar({ view, setView, pendingCount, onUploadClick, user, onLogout })
   ];
   return (
     <div className="w-60 bg-navy text-paper p-5 flex flex-col gap-1">
-      <div className="flex items-center gap-2.5 px-2 pb-6">
-        <div className="w-8 h-8 rounded-lg bg-gold flex items-center justify-center">
-          <Scale size={17} className="text-navy" />
+      <div className="flex items-center justify-between gap-2.5 px-2 pb-6">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-gold flex items-center justify-center">
+            <Scale size={17} className="text-navy" />
+          </div>
+          <div>
+            <div className="font-serif text-lg font-bold leading-none">{t("brand.name")}</div>
+            <div className="text-[10px] opacity-60 tracking-wide mt-0.5">{t("brand.tagline")}</div>
+          </div>
         </div>
-        <div>
-          <div className="font-serif text-lg font-bold leading-none">{t("brand.name")}</div>
-          <div className="text-[10px] opacity-60 tracking-wide mt-0.5">{t("brand.tagline")}</div>
-        </div>
+        <LanguageSwitcher />
       </div>
       {items.map((it) => {
         const Icon = it.icon;
@@ -213,7 +216,6 @@ function Sidebar({ view, setView, pendingCount, onUploadClick, user, onLogout })
           <LogOut size={15} />
           <span>{t("nav.logout")}</span>
         </button>
-        <div className="px-2 pt-3"><LanguageSwitcher /></div>
         <div className="text-[11px] opacity-40 px-2 pt-3">{import.meta.env.VITE_API_URL}</div>
       </div>
     </div>
@@ -433,7 +435,7 @@ function VerificationQueue({ cases, activeCase, setActiveCaseId, departments, de
                     <button onClick={() => setRejectingId(d.id)} className="bg-white border border-[#E8BEB6] text-danger text-xs font-semibold px-3.5 py-2 rounded-md flex items-center gap-1.5"><XCircle size={13} /> Reject</button>
                   </div>
                 ) : d.verification_status === "rejected" ? (
-                  <div className="text-xs text-danger">Reason: {d.rejection_reason}</div>
+                  <div className="text-xs text-[#B91C1C]">Reason: {d.rejection_reason}</div>
                 ) : null}
               </>
             )}
