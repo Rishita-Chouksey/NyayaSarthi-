@@ -3,18 +3,20 @@ import { AlertTriangle, Loader2, Scale, ShieldCheck } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import GoogleButton from "../components/GoogleButton";
 import * as api from "../api";
+import { useTranslation } from "react-i18next";
 
 const ROLES = [
-  { value: "department_officer", label: "Department Officer" },
-  { value: "legal_officer", label: "Legal Officer", needsInvite: true },
-  { value: "admin_authority", label: "Administrative Authority", needsInvite: true },
-  { value: "auditor", label: "Auditor (read-only)", needsInvite: true },
+  { value: "department_officer", key: "roles.department_officer" },
+  { value: "legal_officer", key: "roles.legal_officer", needsInvite: true },
+  { value: "admin_authority", key: "roles.admin_authority", needsInvite: true },
+  { value: "auditor", key: "roles.auditorReadOnly", needsInvite: true },
 ];
 
 const emptyForm = { full_name: "", email: "", password: "", role: "department_officer", department_id: "", invite_code: "" };
 
 export default function AuthPage() {
   const { login, signup, loginWithGoogle } = useAuth();
+  const { t } = useTranslation();
   const [mode, setMode] = useState("login"); // "login" | "signup"
   const [departments, setDepartments] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -44,7 +46,7 @@ export default function AuthPage() {
         await signup({ ...form, email: form.email.trim(), department_id: form.department_id || null });
       }
     } catch (err) {
-      setError(err?.response?.data?.detail || "Something went wrong. Please try again.");
+      setError(err?.response?.data?.detail || t("auth.genericError"));
     } finally {
       setBusy(false);
     }
@@ -56,7 +58,7 @@ export default function AuthPage() {
     try {
       await loginWithGoogle(credential);
     } catch (err) {
-      setError(err?.response?.data?.detail || "Google sign-in failed.");
+      setError(err?.response?.data?.detail || t("auth.googleError"));
     } finally {
       setBusy(false);
     }
@@ -70,8 +72,8 @@ export default function AuthPage() {
             <Scale size={18} className="text-navy" />
           </div>
           <div>
-            <div className="font-serif text-xl font-bold leading-none text-navy">NyayaSarthi</div>
-            <div className="text-[10px] text-[#8A8371] tracking-wide mt-0.5">COURT ORDER EXECUTION</div>
+            <div className="font-serif text-xl font-bold leading-none text-navy">{t("brand.name")}</div>
+            <div className="text-[10px] text-[#8A8371] tracking-wide mt-0.5">{t("brand.tagline")}</div>
           </div>
         </div>
 
@@ -84,7 +86,7 @@ export default function AuthPage() {
                 mode === "login" ? "bg-navy text-white" : "text-[#6B7280]"
               }`}
             >
-              Log in
+              {t("auth.login")}
             </button>
             <button
               type="button"
@@ -93,7 +95,7 @@ export default function AuthPage() {
                 mode === "signup" ? "bg-navy text-white" : "text-[#6B7280]"
               }`}
             >
-              Create account
+              {t("auth.createAccount")}
             </button>
           </div>
 
@@ -102,35 +104,35 @@ export default function AuthPage() {
           </div>
           <div className="flex items-center gap-3 mb-5">
             <div className="h-px bg-[#E7E1D3] flex-1" />
-            <div className="text-[11px] text-[#8A8371] uppercase tracking-wide">or use your official email</div>
+            <div className="text-[11px] text-[#8A8371] uppercase tracking-wide">{t("auth.officialEmail")}</div>
             <div className="h-px bg-[#E7E1D3] flex-1" />
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
             {mode === "signup" && (
-              <Field label="Full name">
+              <Field label={t("auth.fullName")}>
                 <input
                   required
                   value={form.full_name}
                   onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                   className="border border-[#DCD5C0] rounded-md px-3 py-2 text-sm w-full"
-                  placeholder="Priya Sharma"
+                  placeholder={t("auth.namePlaceholder")}
                 />
               </Field>
             )}
 
-            <Field label="Official email">
+            <Field label={t("auth.email")}>
               <input
                 required
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="border border-[#DCD5C0] rounded-md px-3 py-2 text-sm w-full"
-                placeholder="you@gov.in"
+                placeholder={t("auth.emailPlaceholder")}
               />
             </Field>
 
-            <Field label="Password">
+            <Field label={t("auth.password")}>
               <input
                 required
                 type="password"
@@ -138,13 +140,13 @@ export default function AuthPage() {
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 className="border border-[#DCD5C0] rounded-md px-3 py-2 text-sm w-full"
-                placeholder={mode === "signup" ? "At least 8 characters" : "••••••••"}
+                placeholder={mode === "signup" ? t("auth.passwordHint") : "••••••••"}
               />
             </Field>
 
             {mode === "signup" && (
               <>
-                <Field label="Role">
+                <Field label={t("auth.role")}>
                   <select
                     value={form.role}
                     onChange={(e) => setForm({ ...form, role: e.target.value })}
@@ -152,18 +154,18 @@ export default function AuthPage() {
                   >
                     {ROLES.map((r) => (
                       <option key={r.value} value={r.value}>
-                        {r.label}
+                        {t(r.key)}
                       </option>
                     ))}
                   </select>
                 </Field>
-                <Field label="Department (optional)">
+                <Field label={t("auth.department")}>
                   <select
                     value={form.department_id}
                     onChange={(e) => setForm({ ...form, department_id: e.target.value })}
                     className="border border-[#DCD5C0] rounded-md px-3 py-2 text-sm w-full bg-white"
                   >
-                    <option value="">— Not department-specific —</option>
+                    <option value="">{t("auth.notDepartmentSpecific")}</option>
                     {departments.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.name}
@@ -172,13 +174,13 @@ export default function AuthPage() {
                   </select>
                 </Field>
                 {ROLES.find((r) => r.value === form.role)?.needsInvite && (
-                  <Field label="Invite code">
+                  <Field label={t("auth.inviteCode")}>
                     <input
                       required
                       value={form.invite_code}
                       onChange={(e) => setForm({ ...form, invite_code: e.target.value })}
                       className="border border-[#DCD5C0] rounded-md px-3 py-2 text-sm w-full"
-                      placeholder="Provided by your admin authority"
+                      placeholder={t("auth.invitePlaceholder")}
                     />
                   </Field>
                 )}
@@ -197,13 +199,13 @@ export default function AuthPage() {
               className="bg-navy text-white font-semibold text-sm py-2.5 rounded-md flex items-center justify-center gap-2 mt-1.5 disabled:opacity-60"
             >
               {busy && <Loader2 size={14} className="animate-spin" />}
-              {mode === "login" ? "Log in" : "Create account"}
+              {mode === "login" ? t("auth.login") : t("auth.createAccount")}
             </button>
           </form>
         </div>
 
         <div className="text-[11px] text-[#8A8371] text-center mt-5 flex items-center justify-center gap-1.5">
-          <ShieldCheck size={12} /> For authorized government officials only. All access is logged and audited.
+          <ShieldCheck size={12} /> {t("auth.authorizedOnly")}
         </div>
       </div>
     </div>

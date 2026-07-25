@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Renders Google's own "Sign in with Google" button via Google Identity
@@ -9,6 +10,7 @@ import { useEffect, useRef } from "react";
  * and our backend do all the real verification.
  */
 export default function GoogleButton({ onCredential }) {
+  const { t, i18n } = useTranslation();
   const divRef = useRef(null);
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -38,12 +40,12 @@ export default function GoogleButton({ onCredential }) {
     return () => {
       cancelled = true;
     };
-  }, [clientId, onCredential]);
+  }, [clientId, onCredential, i18n.language]);
 
   if (!clientId) {
     return (
       <div className="text-xs text-[#8A8371] border border-dashed border-[#DCD5C0] rounded-md px-3 py-2.5 text-center">
-        Set VITE_GOOGLE_CLIENT_ID to enable "Sign in with Google"
+        {t("auth.googleNotConfigured")}
       </div>
     );
   }

@@ -7,10 +7,12 @@ import {
 import * as api from "./api";
 import { useAuth } from "./auth/AuthContext";
 import AuthPage from "./pages/AuthPage";
+import { LanguageSwitcher } from "./components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 
-function fmtDate(d) {
+function fmtDate(d, language = "en") {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  return new Date(d).toLocaleDateString(language === "hi" ? "hi-IN" : "en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 function daysUntil(dateStr) {
   if (!dateStr) return null;
@@ -21,6 +23,7 @@ function daysUntil(dateStr) {
 
 export default function App() {
   const { token, user, logout } = useAuth();
+  const { t } = useTranslation();
   const [view, setView] = useState("home");
   const [cases, setCases] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -32,7 +35,7 @@ export default function App() {
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef(null);
 
-  const deptName = (id) => departments.find((d) => d.id === id)?.name || "Unassigned";
+  const deptName = (id) => departments.find((d) => d.id === id)?.name || t("common.unassigned");
 
   async function refreshCases() {
     const res = await api.listCases();
@@ -79,7 +82,7 @@ export default function App() {
       setView("queue");
     } catch (err) {
       setUploadState("error");
-      setUploadError(err?.response?.data?.detail || "Something went wrong talking to the backend. Is it running at http://localhost:8000?");
+      setUploadError(err?.response?.data?.detail || t("intake.backendError"));
     }
   }
 
@@ -154,13 +157,14 @@ const ROLE_LABELS = {
 };
 
 function Sidebar({ view, setView, pendingCount, onUploadClick, user, onLogout }) {
+  const { t } = useTranslation();
   const canUpload = UPLOAD_ROLES.includes(user?.role);
   const items = [
-    { key: "home", label: "Case Processor", icon: Scale, action: () => setView("home") },
-    { key: "intake", label: "Case Intake", icon: Inbox, action: onUploadClick, disabled: !canUpload },
-    { key: "queue", label: "Verification Queue", icon: ShieldCheck, action: () => setView("queue"), badge: pendingCount },
-    { key: "actions", label: "Approved Actions", icon: CheckCircle2, action: () => setView("actions") },
-    { key: "dashboard", label: "Actioned Dashboard", icon: LayoutDashboard, action: () => setView("dashboard") },
+    { key: "home", label: t("nav.caseProcessor"), icon: Scale, action: () => setView("home") },
+    { key: "intake", label: t("nav.caseIntake"), icon: Inbox, action: onUploadClick, disabled: !canUpload },
+    { key: "queue", label: t("nav.verificationQueue"), icon: ShieldCheck, action: () => setView("queue"), badge: pendingCount },
+    { key: "actions", label: t("nav.approvedActions"), icon: CheckCircle2, action: () => setView("actions") },
+    { key: "dashboard", label: t("nav.dashboard"), icon: LayoutDashboard, action: () => setView("dashboard") },
   ];
   return (
     <div className="w-60 bg-navy text-paper p-5 flex flex-col gap-1">
@@ -169,8 +173,8 @@ function Sidebar({ view, setView, pendingCount, onUploadClick, user, onLogout })
           <Scale size={17} className="text-navy" />
         </div>
         <div>
-          <div className="font-serif text-lg font-bold leading-none">NyayaSarthi</div>
-          <div className="text-[10px] opacity-60 tracking-wide mt-0.5">COURT ORDER EXECUTION</div>
+          <div className="font-serif text-lg font-bold leading-none">{t("brand.name")}</div>
+          <div className="text-[10px] opacity-60 tracking-wide mt-0.5">{t("brand.tagline")}</div>
         </div>
       </div>
       {items.map((it) => {
@@ -181,7 +185,7 @@ function Sidebar({ view, setView, pendingCount, onUploadClick, user, onLogout })
             key={it.key}
             onClick={it.disabled ? undefined : it.action}
             disabled={it.disabled}
-            title={it.disabled ? "Your role doesn't have permission to intake new judgments" : undefined}
+            title={it.disabled ? t("nav.noIntakePermission") : undefined}
             className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-left ${
               it.disabled
                 ? "text-[#DCE3EA]/30 cursor-not-allowed"
@@ -200,15 +204,16 @@ function Sidebar({ view, setView, pendingCount, onUploadClick, user, onLogout })
       <div className="mt-auto border-t border-white/10 pt-3.5">
         <div className="px-2 mb-2.5">
           <div className="text-sm font-semibold text-[#EFD9A5] truncate">{user?.full_name}</div>
-          <div className="text-[10.5px] opacity-60">{ROLE_LABELS[user?.role] || user?.role}</div>
+          <div className="text-[10.5px] opacity-60">{user?.role ? t(`roles.${user.role}`, { defaultValue: user.role }) : ""}</div>
         </div>
         <button
           onClick={onLogout}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-[#DCE3EA] hover:bg-white/5"
         >
           <LogOut size={15} />
-          <span>Log out</span>
+          <span>{t("nav.logout")}</span>
         </button>
+        <div className="px-2 pt-3"><LanguageSwitcher /></div>
         <div className="text-[11px] opacity-40 px-2 pt-3">{import.meta.env.VITE_API_URL}</div>
       </div>
     </div>
@@ -257,10 +262,11 @@ function Home({ cases, onUploadClick, canUpload }) {
 }
 
 function IntakeProgress({ state, error, caseObj, onRetry }) {
+  const { t } = useTranslation();
   return (
     <div className="max-w-lg mt-16">
-      <div className="font-serif text-xl font-bold mb-1">Processing your judgment</div>
-      <div className="text-[#6B7280] text-sm mb-7">The real backend is reading the PDF and calling Gemini AI right now.</div>
+      <div className="font-serif text-xl font-bold mb-1">{t("intake.title")}</div>
+      <div className="text-[#6B7280] text-sm mb-7">{t("intake.description")}</div>
 
       {state === "uploading" && (
         <div className="flex items-center gap-3 text-sm text-ink">
@@ -271,9 +277,9 @@ function IntakeProgress({ state, error, caseObj, onRetry }) {
 
       {state === "error" && (
         <div className="bg-[#F7E6E3] border border-[#E8BEB6] rounded-lg p-4 text-sm text-danger">
-          <div className="font-semibold mb-1 flex items-center gap-2"><AlertTriangle size={15} /> Extraction failed</div>
+          <div className="font-semibold mb-1 flex items-center gap-2"><AlertTriangle size={15} /> {t("intake.failed")}</div>
           <div className="mb-3">{error}</div>
-          <button onClick={onRetry} className="bg-danger text-white text-xs font-semibold px-3 py-2 rounded-md">Try another file</button>
+          <button onClick={onRetry} className="bg-danger text-white text-xs font-semibold px-3 py-2 rounded-md">{t("intake.retry")}</button>
         </div>
       )}
 
@@ -287,6 +293,7 @@ function IntakeProgress({ state, error, caseObj, onRetry }) {
 }
 
 function VerificationQueue({ cases, activeCase, setActiveCaseId, departments, deptName, onApprove, onEditApprove, onReject, onDone }) {
+  const { t } = useTranslation();
   const [editingId, setEditingId] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -300,9 +307,9 @@ function VerificationQueue({ cases, activeCase, setActiveCaseId, departments, de
   if (!activeCase) {
     return (
       <div className="max-w-2xl">
-        <div className="font-serif text-xl font-bold mb-4">AI Verification Queue</div>
+        <div className="font-serif text-xl font-bold mb-4">{t("queue.title")}</div>
         {openQueueCases.length === 0 ? (
-          <EmptyState text="No judgments queued for verification. Upload a PDF to populate the queue." />
+          <EmptyState text={t("queue.empty")} />
         ) : (
           <div className="flex flex-col gap-2">
             {openQueueCases.map((c) => (
@@ -346,7 +353,7 @@ function VerificationQueue({ cases, activeCase, setActiveCaseId, departments, de
   }
   async function confirmReject(d) {
     setBusyId(d.id);
-    await onReject(d.id, rejectReason || "Not applicable");
+    await onReject(d.id, rejectReason || t("queue.defaultRejectionReason"));
     setRejectingId(null);
     setRejectReason("");
     setBusyId(null);
@@ -354,14 +361,14 @@ function VerificationQueue({ cases, activeCase, setActiveCaseId, departments, de
 
   return (
     <div className="max-w-3xl">
-      <button onClick={() => setActiveCaseId(null)} className="text-navy text-xs font-semibold flex items-center gap-1.5"><ArrowLeft size={14} /> All queues</button>
+      <button onClick={() => setActiveCaseId(null)} className="text-navy text-xs font-semibold flex items-center gap-1.5"><ArrowLeft size={14} /> {t("queue.allQueues")}</button>
 
       <div className="flex justify-between items-end mt-3.5 mb-1.5">
         <div>
           <div className="font-serif text-xl font-bold">{activeCase.parties?.petitioner} vs. {activeCase.parties?.respondent}</div>
           <div className="font-mono text-xs text-[#8A8371] mt-0.5">{activeCase.case_number} · {activeCase.court_name} · Order dated {fmtDate(activeCase.order_date)}</div>
         </div>
-        <div className={`text-xs font-semibold ${allDone ? "text-okgreen" : "text-gold"}`}>{resolvedCount} of {total} directives verified</div>
+        <div className={`text-xs font-semibold ${allDone ? "text-okgreen" : "text-gold"}`}>{t("queue.verified", { resolved: resolvedCount, total })}</div>
       </div>
 
       <div className="h-1.5 bg-[#E7E1D3] rounded-full mb-5 overflow-hidden">
@@ -375,7 +382,7 @@ function VerificationQueue({ cases, activeCase, setActiveCaseId, departments, de
               <ConfidenceTag level={d.ai_confidence} />
               {d.verification_status !== "pending_verification" && (
                 <span className={`text-[10.5px] font-bold uppercase tracking-wide ${d.verification_status === "rejected" ? "text-danger" : "text-okgreen"}`}>
-                  {d.verification_status === "rejected" ? "Rejected" : d.verification_status === "edited_approved" ? "Edited & Approved" : "Approved"}
+                  {d.verification_status === "rejected" ? t("queue.rejected") : d.verification_status === "edited_approved" ? t("queue.editedApproved") : t("queue.approved")}
                 </span>
               )}
             </div>
@@ -394,7 +401,7 @@ function VerificationQueue({ cases, activeCase, setActiveCaseId, departments, de
                   <button disabled={busyId === d.id} onClick={() => saveEdit(d)} className="bg-navy text-white text-xs font-semibold px-3.5 py-2 rounded-md flex items-center gap-1.5">
                     {busyId === d.id ? <Loader2 size={13} className="animate-spin" /> : null} Save & Approve
                   </button>
-                  <button onClick={() => setEditingId(null)} className="bg-white border border-[#DCD5C0] text-xs font-semibold px-3.5 py-2 rounded-md">Cancel</button>
+                  <button onClick={() => setEditingId(null)} className="bg-white border border-[#DCD5C0] text-xs font-semibold px-3.5 py-2 rounded-md">{t("queue.cancel")}</button>
                 </div>
               </div>
             ) : (
@@ -445,12 +452,13 @@ function VerificationQueue({ cases, activeCase, setActiveCaseId, departments, de
 }
 
 function ApprovedActions({ actions, deptName, onOpenCase }) {
+  const { t } = useTranslation();
   return (
     <div className="max-w-3xl">
-      <div className="font-serif text-xl font-bold mb-1">Approved Actions</div>
-      <p className="text-[#6B7280] text-sm mb-5">Confirmed action items, published only after human verification.</p>
+      <div className="font-serif text-xl font-bold mb-1">{t("actions.title")}</div>
+      <p className="text-[#6B7280] text-sm mb-5">{t("actions.description")}</p>
       {actions.length === 0 ? (
-        <EmptyState text="No actions approved yet. Verify a case's directives to see them here." />
+        <EmptyState text={t("actions.empty")} />
       ) : (
         <div className="flex flex-col gap-2">
           {actions.map((a) => (
@@ -469,6 +477,7 @@ function ApprovedActions({ actions, deptName, onOpenCase }) {
 }
 
 function Dashboard({ actions, stats, deptName, onStatusChange }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
@@ -484,13 +493,13 @@ function Dashboard({ actions, stats, deptName, onStatusChange }) {
 
   return (
     <div>
-      <div className="font-serif text-xl font-bold mb-4">Actioned Dashboard</div>
+      <div className="font-serif text-xl font-bold mb-4">{t("dashboard.title")}</div>
 
       <div className="grid grid-cols-4 gap-3 mb-5.5 mb-6">
-        <StatCard label="Total Cases" value={stats.total_cases} icon={Scale} />
-        <StatCard label="Open Directives" value={stats.open_directives} icon={Inbox} />
-        <StatCard label="Overdue" value={stats.overdue} icon={AlertTriangle} tone="red" />
-        <StatCard label="Compliance Rate" value={`${stats.compliance_rate}%`} icon={ShieldCheck} tone="green" />
+        <StatCard label={t("dashboard.totalCases")} value={stats.total_cases} icon={Scale} />
+        <StatCard label={t("dashboard.openDirectives")} value={stats.open_directives} icon={Inbox} />
+        <StatCard label={t("dashboard.overdue")} value={stats.overdue} icon={AlertTriangle} tone="red" />
+        <StatCard label={t("dashboard.complianceRate")} value={`${stats.compliance_rate}%`} icon={ShieldCheck} tone="green" />
       </div>
 
       <div className="flex gap-2.5 mb-3.5">
@@ -499,16 +508,16 @@ function Dashboard({ actions, stats, deptName, onStatusChange }) {
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search directive text…" className="border border-[#DCD5C0] rounded-md pl-8 pr-2.5 py-2 text-xs w-full" />
         </div>
         <select value={filter} onChange={(e) => setFilter(e.target.value)} className="border border-[#DCD5C0] rounded-md px-2.5 py-2 text-xs">
-          <option value="all">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="in_progress">In progress</option>
-          <option value="completed">Completed</option>
-          <option value="overdue">Overdue</option>
+          <option value="all">{t("dashboard.allStatuses")}</option>
+          <option value="pending">{t("status.pending")}</option>
+          <option value="in_progress">{t("status.in_progress")}</option>
+          <option value="completed">{t("status.completed")}</option>
+          <option value="overdue">{t("status.overdue")}</option>
         </select>
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState text="No matching actions." />
+        <EmptyState text={t("dashboard.empty")} />
       ) : (
         <div className="bg-white border border-[#E7E1D3] rounded-xl overflow-hidden">
           <table className="w-full text-sm border-collapse">
@@ -559,6 +568,7 @@ function StatCard({ label, value, icon: Icon, tone }) {
 }
 
 function StatusPill({ status }) {
+  const { t } = useTranslation();
   const map = {
     uploaded: ["text-[#5A5646]", "bg-[#EFEADA]"],
     extracting: ["text-gold", "bg-[#FBF0DA]"],
@@ -572,7 +582,7 @@ function StatusPill({ status }) {
     overdue: ["text-danger", "bg-[#F7E6E3]"],
   };
   const [fg, bg] = map[status] || ["text-[#5A5646]", "bg-[#EFEADA]"];
-  return <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full capitalize whitespace-nowrap ${fg} ${bg}`}>{(status || "").replace(/_/g, " ")}</span>;
+  return <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full capitalize whitespace-nowrap ${fg} ${bg}`}>{t(`status.${status}`, { defaultValue: (status || "").replace(/_/g, " ") })}</span>;
 }
 
 function ConfidenceTag({ level }) {
