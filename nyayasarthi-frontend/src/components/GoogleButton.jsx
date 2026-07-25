@@ -14,10 +14,17 @@ export default function GoogleButton({ onCredential }) {
   const divRef = useRef(null);
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
+  // Keep the latest onCredential in a ref, so the effect below never needs
+  // it as a dependency — this is what stops re-initialization on every
+  // parent render (which was stacking duplicate invisible Google iframes
+  // that silently intercepted clicks elsewhere on the page).
+  const onCredentialRef = useRef(onCredential);
+  useEffect(() => {
+    onCredentialRef.current = onCredential;
+  }, [onCredential]);
+
   useEffect(() => {
     if (!clientId || !divRef.current) return;
-
-    // The GSI script loads async — wait for it if it hasn't attached yet.
     let cancelled = false;
     const tryInit = () => {
       if (cancelled) return;
@@ -27,8 +34,11 @@ export default function GoogleButton({ onCredential }) {
       }
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: (response) => onCredential(response.credential),
+        callback: (response) => onCredentialRef.current(response.credential),
       });
+      // Clear anything already rendered in this div before rendering again,
+      // so repeated calls never stack duplicate button/iframe elements.
+      if (divRef.current) divRef.current.innerHTML = "";
       window.google.accounts.id.renderButton(divRef.current, {
         theme: "outline",
         size: "large",
@@ -39,8 +49,11 @@ export default function GoogleButton({ onCredential }) {
     tryInit();
     return () => {
       cancelled = true;
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.cancel();
+      }
     };
-  }, [clientId, onCredential, i18n.language]);
+  }, [clientId]); // ← sirf clientId — language ya onCredential se dobara nahi chalega
 
   if (!clientId) {
     return (
@@ -49,6 +62,5 @@ export default function GoogleButton({ onCredential }) {
       </div>
     );
   }
-
   return <div ref={divRef} className="flex justify-center" />;
 }
